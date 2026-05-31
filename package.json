@@ -1,0 +1,17 @@
+{
+  "name": "map-protect",
+  "private": true,
+  "version": "1.0.0",
+  "description": "MAP-PROTECT — Plateforme juridique Manifeste Paris 2026",
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "npm run dev --prefix api",
+    "dev:web": "npm run dev --prefix map-protect",
+    "install:all": "npm install --prefix api && npm install --prefix map-protect",
+    "build": "npm run build --prefix api && npm run build --prefix map-protect",
+    "start:api": "npm run start --prefix api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

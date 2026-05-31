@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { Country } from '../data/countries';
+import type { Country, CountryWithLaws } from '../types';
 
 interface MapProps {
   countries: Country[];
-  selectedCountry: Country | null;
+  selectedCountry: CountryWithLaws | Country | null;
   onCountrySelect: (country: Country) => void;
 }
 
@@ -72,7 +72,7 @@ export default function MapComponent({ countries, selectedCountry, onCountrySele
       <div className="map-legend">
         <span className="legend-dot" />
         <span>Pays signataire</span>
-        <span className="legend-count">20 pays du Manifeste Paris 2026</span>
+        <span className="legend-count">{countries.length} pays du Manifeste Paris 2026</span>
       </div>
     </div>
   );

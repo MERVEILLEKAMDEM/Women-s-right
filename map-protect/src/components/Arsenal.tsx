@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import type { Country } from '../data/countries';
+import { ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { api } from '../api/client';
+import type { CountryWithLaws, Law } from '../types';
 
 interface ArsenalProps {
-  country: Country | null;
+  country: CountryWithLaws | null;
 }
 
 type Tab = 'femme' | 'enfant' | 'vbg';
@@ -16,7 +17,8 @@ const TAB_LABELS: Record<Tab, string> = {
 
 export default function Arsenal({ country }: ArsenalProps) {
   const [activeTab, setActiveTab] = useState<Tab>('femme');
-  const [expandedLaw, setExpandedLaw] = useState<number | null>(null);
+  const [expandedLaw, setExpandedLaw] = useState<string | null>(null);
+  const [lawDetails, setLawDetails] = useState<Record<string, Law>>({});
 
   if (!country) {
     return (
@@ -30,6 +32,22 @@ export default function Arsenal({ country }: ArsenalProps) {
   }
 
   const laws = country.laws[activeTab];
+
+  const toggleLaw = async (law: Law) => {
+    if (expandedLaw === law.id) {
+      setExpandedLaw(null);
+      return;
+    }
+    setExpandedLaw(law.id);
+    if (!lawDetails[law.id]) {
+      try {
+        const detail = await api.getLaw(law.id);
+        setLawDetails(prev => ({ ...prev, [law.id]: detail }));
+      } catch {
+        setLawDetails(prev => ({ ...prev, [law.id]: law }));
+      }
+    }
+  };
 
   return (
     <div className="arsenal-panel">
@@ -59,29 +77,41 @@ export default function Arsenal({ country }: ArsenalProps) {
       </div>
 
       <div className="arsenal-laws">
-        {laws.map((law, i) => (
-          <div key={i} className="law-item">
-            <div
-              className="law-header"
-              onClick={() => setExpandedLaw(expandedLaw === i ? null : i)}
-            >
-              <div className="law-left">
-                <span className="law-type-badge">{law.type}</span>
-                <span className="law-title">{law.title}</span>
+        {laws.map(law => {
+          const detail = lawDetails[law.id] ?? law;
+          return (
+            <div key={law.id} className="law-item">
+              <div className="law-header" onClick={() => toggleLaw(law)}>
+                <div className="law-left">
+                  <span className="law-type-badge">{law.type}</span>
+                  <span className="law-title">{law.title}</span>
+                </div>
+                {expandedLaw === law.id
+                  ? <ChevronUp size={16} className="law-chevron" />
+                  : <ChevronDown size={16} className="law-chevron" />
+                }
               </div>
-              {expandedLaw === i
-                ? <ChevronUp size={16} className="law-chevron" />
-                : <ChevronDown size={16} className="law-chevron" />
-              }
+              {expandedLaw === law.id && (
+                <div className="law-detail">
+                  <p className="law-summary-label">Résumé vulgarisé</p>
+                  <p className="law-summary">{detail.summary}</p>
+                  <p className="law-meta">
+                    Catégorie : {TAB_LABELS[activeTab]} · Pays : {country.name}
+                    {detail.viewCount > 0 && ` · ${detail.viewCount} consultations`}
+                  </p>
+                  <a
+                    href={api.downloadDocument(law.id)}
+                    className="law-download-btn"
+                    download
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <Download size={14} /> Télécharger le document source (PDF)
+                  </a>
+                </div>
+              )}
             </div>
-            {expandedLaw === i && (
-              <div className="law-detail">
-                <p>Texte de loi relatif à : <strong>{law.title}</strong></p>
-                <p className="law-meta">Catégorie : {TAB_LABELS[activeTab]} · Pays : {country.name}</p>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

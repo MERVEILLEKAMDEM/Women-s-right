@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, BarChart2, BookOpen, AlertTriangle, TrendingUp, Eye, Plus, Edit2, Trash2, CheckCircle, Clock } from 'lucide-react';
+import { api } from '../api/client';
+import type { AdminAlert, AdminLawRow, DashboardStats } from '../types';
 
 interface AdminModalProps {
   onClose: () => void;
@@ -7,62 +9,61 @@ interface AdminModalProps {
 
 type AdminTab = 'stats' | 'laws' | 'alerts';
 
-const STATS_TOP_COUNTRIES = [
-  { name: 'France', views: 3245, color: '#1565C0' },
-  { name: 'Sénégal', views: 2891, color: '#1976D2' },
-  { name: 'Madagascar', views: 2156, color: '#1e88e5' },
-  { name: 'Cameroun', views: 1834, color: '#42a5f5' },
-  { name: "Côte d'Ivoire", views: 1523, color: '#90caf9' },
-];
-
-const STATS_TOP_LAWS = [
-  { title: 'Loi contre les violences conjugales (France)', views: 892, color: '#e91e63' },
-  { title: "Loi sur la parité (Sénégal)", views: 745, color: '#9c27b0' },
-  { title: 'Loi VBG 2019 (Madagascar)', views: 678, color: '#673ab7' },
-  { title: "Code de l'enfant (Bénin)", views: 534, color: '#3f51b5' },
-  { title: 'Loi contre les MGF (Burkina Faso)', views: 467, color: '#7c4dff' },
-];
-
-const THEMES = [
-  { label: 'Violence domestique', searches: 1234, trend: 10 },
-  { label: 'Mariage précoce', searches: 987, trend: 18 },
-  { label: 'Équité salariale', searches: 756, trend: 20 },
-  { label: 'Harcèlement sexuel', searches: 623, trend: 13 },
-  { label: 'MGF', searches: 445, trend: 20 },
-];
-
-const LAWS_DATA = [
-  { id: 1, country: 'France', category: 'VBG', title: 'Loi contre les violences conjugales 2020', type: 'Loi', status: 'active' },
-  { id: 2, country: 'Sénégal', category: 'Femme', title: "Loi sur l'égalité de genre", type: 'Loi', status: 'active' },
-  { id: 3, country: 'Maroc', category: 'VBG', title: 'Loi 103-13 Lutte contre les violences', type: 'Loi 103-13', status: 'active' },
-  { id: 4, country: 'Tunisie', category: 'VBG', title: "Loi organique 2017-58", type: 'Loi organique', status: 'active' },
-  { id: 5, country: 'Cameroun', category: 'Enfant', title: "Loi sur la protection de l'enfant", type: 'Loi', status: 'draft' },
-  { id: 6, country: 'Côte d\'Ivoire', category: 'VBG', title: 'Lutte contre les mutilations génitales', type: 'Loi', status: 'active' },
-  { id: 7, country: 'Burkina Faso', category: 'Enfant', title: "Code de l'enfant burkinabè", type: 'Code', status: 'active' },
-  { id: 8, country: 'Mali', category: 'Femme', title: 'Protection des droits des femmes', type: 'Loi', status: 'draft' },
-];
-
-const ALERTS_DATA = [
-  { id: 1, country: 'Sénégal', type: 'Urgence', message: 'Augmentation signalements mariages forcés — région de Ziguinchor', date: '2025-05-15', level: 'high', status: 'open' },
-  { id: 2, country: 'Mali', type: 'Alerte', message: 'Recrudescence MGF signalée dans 3 cercles du sud', date: '2025-05-12', level: 'high', status: 'open' },
-  { id: 3, country: 'France', type: 'Info', message: 'Nouvelle jurisprudence sur les violences économiques dans le couple', date: '2025-05-10', level: 'medium', status: 'resolved' },
-  { id: 4, country: 'Maroc', type: 'Alerte', message: "Signalements en hausse de violences conjugales post-Ramadan", date: '2025-05-08', level: 'medium', status: 'open' },
-  { id: 5, country: 'Cameroun', type: 'Info', message: "Nouvelle circulaire ministérielle sur l'application de la loi VBG", date: '2025-05-05', level: 'low', status: 'resolved' },
-];
-
 export default function AdminModal({ onClose }: AdminModalProps) {
   const [tab, setTab] = useState<AdminTab>('stats');
   const [lawFilter, setLawFilter] = useState('Tous');
   const [alertFilter, setAlertFilter] = useState('Tous');
-  const [laws, setLaws] = useState(LAWS_DATA);
-  const [alerts, setAlerts] = useState(ALERTS_DATA);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [laws, setLaws] = useState<AdminLawRow[]>([]);
+  const [alerts, setAlerts] = useState<AdminAlert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const maxViews = Math.max(...STATS_TOP_COUNTRIES.map(c => c.views));
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [statsData, lawsData, alertsData] = await Promise.all([
+          api.admin.getStats(),
+          api.admin.getLaws(),
+          api.admin.getAlerts(),
+        ]);
+        setStats(statsData);
+        setLaws(lawsData);
+        setAlerts(alertsData);
+      } catch {
+        setError('Impossible de charger les données admin. Vérifiez que l\'API est démarrée.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const maxViews = stats ? Math.max(...stats.topCountries.map(c => c.views), 1) : 1;
+
+  const handleDeleteLaw = async (id: string) => {
+    try {
+      await api.admin.deleteLaw(id);
+      setLaws(prev => prev.filter(l => l.id !== id));
+    } catch {
+      alert('Erreur lors de la suppression');
+    }
+  };
+
+  const handleResolveAlert = async (id: string) => {
+    try {
+      const updated = await api.admin.resolveAlert(id);
+      setAlerts(prev => prev.map(a => (a.id === id ? updated : a)));
+    } catch {
+      alert('Erreur lors de la résolution');
+    }
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="admin-modal-box" onClick={e => e.stopPropagation()}>
-        {/* Header */}
         <div className="admin-modal-header">
           <div className="admin-modal-title-row">
             <BarChart2 size={20} />
@@ -71,7 +72,6 @@ export default function AdminModal({ onClose }: AdminModalProps) {
           <button className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
 
-        {/* Tabs */}
         <div className="admin-tabs">
           {([
             { id: 'stats', label: 'STATISTIQUES', icon: <BarChart2 size={14} /> },
@@ -88,19 +88,18 @@ export default function AdminModal({ onClose }: AdminModalProps) {
           ))}
         </div>
 
-        {/* Content */}
         <div className="admin-content">
+          {loading && <p className="admin-loading">Chargement...</p>}
+          {error && <p className="admin-error">{error}</p>}
 
-          {/* ── STATISTIQUES ── */}
-          {tab === 'stats' && (
+          {!loading && tab === 'stats' && stats && (
             <div>
-              {/* KPI Cards */}
               <div className="admin-kpi-grid">
                 {[
-                  { val: '15 234', label: 'Visites totales' },
-                  { val: '8 456', label: 'Utilisateurs uniques' },
-                  { val: '142', label: "Alertes d'urgence" },
-                  { val: '20', label: 'Pays signataires' },
+                  { val: stats.totalVisits.toLocaleString(), label: 'Visites totales' },
+                  { val: stats.uniqueUsers.toLocaleString(), label: 'Utilisateurs uniques' },
+                  { val: String(stats.emergencyAlerts), label: "Alertes d'urgence" },
+                  { val: String(stats.countryCount), label: 'Pays signataires' },
                 ].map(k => (
                   <div key={k.label} className="admin-kpi-card">
                     <div className="admin-kpi-val">{k.val}</div>
@@ -110,37 +109,35 @@ export default function AdminModal({ onClose }: AdminModalProps) {
               </div>
 
               <div className="admin-two-col">
-                {/* Top 5 pays */}
                 <div className="admin-table-card">
                   <div className="admin-table-title">Top 5 — Pays les plus consultés</div>
                   <table className="admin-table">
                     <thead><tr><th>Pays</th><th>Vues</th></tr></thead>
                     <tbody>
-                      {STATS_TOP_COUNTRIES.map(c => (
+                      {stats.topCountries.map((c, i) => (
                         <tr key={c.name}>
                           <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ flex: 1, height: 6, background: '#f0f2f5', borderRadius: 3, overflow: 'hidden' }}>
-                              <div style={{ width: `${(c.views / maxViews) * 100}%`, height: '100%', background: c.color, borderRadius: 3 }} />
+                              <div style={{ width: `${(c.views / maxViews) * 100}%`, height: '100%', background: `hsl(${210 + i * 15}, 70%, 50%)`, borderRadius: 3 }} />
                             </div>
                             {c.name}
                           </td>
-                          <td><span className="admin-badge" style={{ background: c.color }}>{c.views.toLocaleString()}</span></td>
+                          <td><span className="admin-badge">{c.views.toLocaleString()}</span></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
 
-                {/* Top 5 lois */}
                 <div className="admin-table-card">
                   <div className="admin-table-title">Top 5 — Lois les plus consultées</div>
                   <table className="admin-table">
                     <thead><tr><th>Loi</th><th>Vues</th></tr></thead>
                     <tbody>
-                      {STATS_TOP_LAWS.map(l => (
+                      {stats.topLaws.map(l => (
                         <tr key={l.title}>
                           <td style={{ fontSize: 12 }}>{l.title}</td>
-                          <td><span className="admin-badge" style={{ background: l.color }}>{l.views}</span></td>
+                          <td><span className="admin-badge">{l.views}</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -148,13 +145,12 @@ export default function AdminModal({ onClose }: AdminModalProps) {
                 </div>
               </div>
 
-              {/* Thématiques */}
               <div className="admin-table-card" style={{ marginTop: 16 }}>
                 <div className="admin-table-title">Thématiques les plus recherchées</div>
                 <table className="admin-table">
                   <thead><tr><th>Thématique</th><th>Recherches</th><th>Tendance</th></tr></thead>
                   <tbody>
-                    {THEMES.map(t => (
+                    {stats.topThemes.map(t => (
                       <tr key={t.label}>
                         <td>{t.label}</td>
                         <td>{t.searches.toLocaleString()}</td>
@@ -171,8 +167,7 @@ export default function AdminModal({ onClose }: AdminModalProps) {
             </div>
           )}
 
-          {/* ── GESTION DES LOIS ── */}
-          {tab === 'laws' && (
+          {!loading && tab === 'laws' && (
             <div>
               <div className="admin-toolbar">
                 <div className="admin-filter-group">
@@ -225,7 +220,7 @@ export default function AdminModal({ onClose }: AdminModalProps) {
                               <button className="admin-action-btn"><Edit2 size={13} /></button>
                               <button
                                 className="admin-action-btn admin-action-danger"
-                                onClick={() => setLaws(prev => prev.filter(x => x.id !== l.id))}
+                                onClick={() => handleDeleteLaw(l.id)}
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -236,14 +231,10 @@ export default function AdminModal({ onClose }: AdminModalProps) {
                   </tbody>
                 </table>
               </div>
-              <div style={{ marginTop: 10, fontSize: 12, color: '#999' }}>
-                {laws.filter(l => lawFilter === 'Tous' || l.category === lawFilter).length} loi(s) affichée(s)
-              </div>
             </div>
           )}
 
-          {/* ── ALERTES D'URGENCE ── */}
-          {tab === 'alerts' && (
+          {!loading && tab === 'alerts' && (
             <div>
               <div className="admin-toolbar">
                 <div className="admin-filter-group">
@@ -255,9 +246,6 @@ export default function AdminModal({ onClose }: AdminModalProps) {
                     >{f}</button>
                   ))}
                 </div>
-                <button className="admin-add-btn admin-add-red">
-                  <AlertTriangle size={14} /> Nouvelle alerte
-                </button>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -278,10 +266,7 @@ export default function AdminModal({ onClose }: AdminModalProps) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ fontSize: 11, color: '#999' }}>{a.date}</span>
                           {a.status === 'open' ? (
-                            <button
-                              className="admin-resolve-btn"
-                              onClick={() => setAlerts(prev => prev.map(x => x.id === a.id ? { ...x, status: 'resolved' } : x))}
-                            >
+                            <button className="admin-resolve-btn" onClick={() => handleResolveAlert(a.id)}>
                               <CheckCircle size={12} /> Résoudre
                             </button>
                           ) : (

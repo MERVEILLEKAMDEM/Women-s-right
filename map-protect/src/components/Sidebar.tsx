@@ -1,6 +1,4 @@
 import { Search, Shield, X } from 'lucide-react';
-import { REGIONS, THEMES } from '../data/countries';
-
 interface SidebarProps {
   searchQuery: string;
   onSearchChange: (val: string) => void;
@@ -9,6 +7,8 @@ interface SidebarProps {
   selectedTheme: string;
   onThemeChange: (val: string) => void;
   onVBGClick: () => void;
+  regions: string[];
+  themes: string[];
 }
 
 export default function Sidebar({
@@ -16,6 +16,8 @@ export default function Sidebar({
   selectedRegion, onRegionChange,
   selectedTheme, onThemeChange,
   onVBGClick,
+  regions,
+  themes,
 }: SidebarProps) {
   const activeFilters = [
     selectedRegion !== 'Toutes les régions' ? `Région: ${selectedRegion}` : null,
@@ -48,13 +50,13 @@ export default function Sidebar({
         <div className="select-group">
           <label>Région</label>
           <select value={selectedRegion} onChange={e => onRegionChange(e.target.value)}>
-            {REGIONS.map(r => <option key={r}>{r}</option>)}
+            {regions.map(r => <option key={r}>{r}</option>)}
           </select>
         </div>
 
         <div className="select-group">
           <select value={selectedTheme} onChange={e => onThemeChange(e.target.value)}>
-            {THEMES.map(t => <option key={t}>{t}</option>)}
+            {themes.map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
 

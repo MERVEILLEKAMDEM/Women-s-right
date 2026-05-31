@@ -1,8 +1,9 @@
 interface StatsBarProps {
   countryCount: number;
+  lawCounts: { femme: number; enfant: number; vbg: number };
 }
 
-export default function StatsBar({ countryCount }: StatsBarProps) {
+export default function StatsBar({ countryCount, lawCounts }: StatsBarProps) {
   return (
     <div className="stats-bar">
       <div className="stat-item">
@@ -11,12 +12,12 @@ export default function StatsBar({ countryCount }: StatsBarProps) {
       </div>
       <div className="stat-divider" />
       <div className="stat-item">
-        <span className="stat-number stat-pink">21</span>
+        <span className="stat-number stat-pink">{lawCounts.femme}</span>
         <span className="stat-label">Lois de protection des femmes</span>
       </div>
       <div className="stat-divider" />
       <div className="stat-item">
-        <span className="stat-number stat-blue">21</span>
+        <span className="stat-number stat-blue">{lawCounts.enfant}</span>
         <span className="stat-label">Lois de protection des enfants</span>
       </div>
     </div>
