@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: map-protect-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mapprotect
+      POSTGRES_PASSWORD: mapprotect
+      POSTGRES_DB: map_protect
+    ports:
+      - "5432:5432"
+    volumes:
+      - map_protect_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mapprotect -d map_protect"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  map_protect_pgdata:

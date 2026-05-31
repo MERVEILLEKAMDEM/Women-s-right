@@ -1,23 +1,17 @@
 import { Router } from 'express';
-import { getDashboardStats, store } from '../store.js';
+import * as db from '../db/repository.js';
+import { asyncHandler } from '../middleware/async-handler.js';
 
 const router = Router();
 
-router.get('/summary', (_req, res) => {
-  res.json({
-    data: {
-      countryCount: store.countries.length,
-      lawCounts: {
-        femme: store.laws.filter(l => l.category === 'femme').length,
-        enfant: store.laws.filter(l => l.category === 'enfant').length,
-        vbg: store.laws.filter(l => l.category === 'vbg').length,
-      },
-    },
-  });
-});
+router.get('/summary', asyncHandler(async (_req, res) => {
+  const data = await db.getStatsSummary();
+  res.json({ data });
+}));
 
-router.get('/dashboard', (_req, res) => {
-  res.json({ data: getDashboardStats() });
-});
+router.get('/dashboard', asyncHandler(async (_req, res) => {
+  const data = await db.getDashboardStats();
+  res.json({ data });
+}));
 
 export default router;

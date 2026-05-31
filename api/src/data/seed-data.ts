@@ -1,28 +1,19 @@
-import { v4 as uuidv4 } from 'uuid';
-import type {
-  AdminAlert,
-  Country,
-  CountryWithLaws,
-  DashboardStats,
-  EmergencyAlert,
-  Law,
-  LawCategory,
-} from './types.js';
+import type { AdminAlert, Country, Law, LawCategory } from '../types.js';
 
-function lawId(countryId: string, category: LawCategory, index: number): string {
+export function lawId(countryId: string, category: LawCategory, index: number): string {
   return `${countryId}-${category}-${index + 1}`;
 }
 
-function buildSummary(title: string, category: LawCategory): string {
+export function buildSummary(title: string, category: LawCategory): string {
   const intro: Record<LawCategory, string> = {
     femme: 'Cette loi protège les droits des femmes et garantit leur sécurité.',
     enfant: "Cette loi défend les droits fondamentaux de l'enfant et sa protection.",
-    vbg: 'Cette loi permet de lutter contre les violences basées sur le genre et d\'aider les victimes.',
+    vbg: "Cette loi permet de lutter contre les violences basées sur le genre et d'aider les victimes.",
   };
   return `${intro[category]} En résumé : ${title}. Contactez le point focal HCS-M26 de votre pays pour en savoir plus.`;
 }
 
-const RAW_COUNTRIES: Omit<Country, 'viewCount'>[] = [
+export const SEED_COUNTRIES: Omit<Country, 'viewCount'>[] = [
   { id: 'cm', name: 'Cameroun', region: 'Afrique', lat: 3.848, lng: 11.502, focalPoint: 'Point focal Cameroun', email: 'cameroun@hcs-m26.org', phone: '+237 222 231 107' },
   { id: 'sn', name: 'Sénégal', region: 'Afrique', lat: 14.497, lng: -14.452, focalPoint: 'Point focal Sénégal', email: 'senegal@hcs-m26.org', phone: '+221 33 822 00 00' },
   { id: 'ci', name: "Côte d'Ivoire", region: 'Afrique', lat: 7.539, lng: -5.547, focalPoint: 'Point focal CI', email: 'cotedivoire@hcs-m26.org' },
@@ -45,7 +36,9 @@ const RAW_COUNTRIES: Omit<Country, 'viewCount'>[] = [
   { id: 'vn', name: 'Vietnam', region: 'Asie', lat: 14.058, lng: 108.277, focalPoint: 'Céline N. Razafindehibe', email: 'celine.razafindehibe@hcs-m26.org' },
 ];
 
-const RAW_LAWS: Record<string, { femme: { type: string; title: string; themes?: string[] }[]; enfant: { type: string; title: string; themes?: string[] }[]; vbg: { type: string; title: string; themes?: string[] }[] }> = {
+type RawLaw = { type: string; title: string; themes?: string[] };
+
+export const SEED_LAWS: Record<string, { femme: RawLaw[]; enfant: RawLaw[]; vbg: RawLaw[] }> = {
   cm: { femme: [{ type: 'Code pénal', title: 'Code pénal - Violence conjugale', themes: ['Violence domestique'] }], enfant: [{ type: 'Loi', title: "Loi sur la protection de l'enfant", themes: ['Mariage précoce'] }], vbg: [{ type: 'Décret', title: 'Décret anti-VBG 2023', themes: ['Violence domestique'] }] },
   sn: { femme: [{ type: 'Loi', title: "Loi sur l'égalité de genre", themes: ['Équité salariale'] }], enfant: [{ type: 'Code', title: "Code de l'enfant" }], vbg: [{ type: 'Loi', title: 'Loi contre les violences basées sur le genre', themes: ['Violence domestique'] }] },
   ci: { femme: [{ type: 'Code pénal', title: 'Dispositions sur les droits de la femme' }], enfant: [{ type: 'Loi', title: "Protection de l'enfance", themes: ['Mariage précoce'] }], vbg: [{ type: 'Loi', title: 'Lutte contre les mutilations génitales', themes: ['MGF'] }] },
@@ -68,13 +61,25 @@ const RAW_LAWS: Record<string, { femme: { type: string; title: string; themes?: 
   vn: { femme: [{ type: 'Loi', title: "Loi sur l'égalité des genres 2006", themes: ['Équité salariale'] }], enfant: [{ type: 'Loi', title: 'Enfance 2016' }], vbg: [{ type: 'Loi', title: 'Prévention violences domestiques', themes: ['Violence domestique'] }] },
 };
 
-function seedLaws(): Law[] {
-  const laws: Law[] = [];
-  const viewSeeds: Record<string, number> = {
-    'fr-femme-1': 892, 'sn-femme-1': 745, 'ma-vbg-1': 678, 'bf-enfant-1': 534, 'ci-vbg-1': 467,
-  };
+export const COUNTRY_VIEW_SEEDS: Record<string, number> = {
+  fr: 3245, sn: 2891, cm: 1834, ci: 1523, ma: 1200,
+  tn: 309, dz: 652, ga: 623, bf: 858, ml: 317, gn: 249, td: 802, ne: 485,
+  be: 705, ch: 366, ca: 576, br: 633, lb: 476, jo: 553, vn: 341,
+};
 
-  for (const [countryId, categories] of Object.entries(RAW_LAWS)) {
+export const LAW_VIEW_SEEDS: Record<string, number> = {
+  'fr-femme-1': 892, 'sn-femme-1': 745, 'ma-vbg-1': 678, 'bf-enfant-1': 534, 'ci-vbg-1': 467,
+};
+
+export function defaultLawViewCount(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  return Math.abs(hash % 200) + 50;
+}
+
+export function buildSeedLaws(): Law[] {
+  const laws: Law[] = [];
+  for (const [countryId, categories] of Object.entries(SEED_LAWS)) {
     for (const category of ['femme', 'enfant', 'vbg'] as LawCategory[]) {
       categories[category].forEach((raw, index) => {
         const id = lawId(countryId, category, index);
@@ -88,7 +93,7 @@ function seedLaws(): Law[] {
           themes: raw.themes ?? [],
           pdfUrl: `/api/documents/${id}/pdf`,
           status: countryId === 'cm' && category === 'enfant' ? 'draft' : 'active',
-          viewCount: viewSeeds[id] ?? Math.floor(Math.random() * 200) + 50,
+          viewCount: LAW_VIEW_SEEDS[id] ?? defaultLawViewCount(id),
         });
       });
     }
@@ -96,149 +101,20 @@ function seedLaws(): Law[] {
   return laws;
 }
 
-const countryViewSeeds: Record<string, number> = {
-  fr: 3245, sn: 2891, cm: 1834, ci: 1523, ma: 1200,
+export const ADMIN_ALERTS_SEED: Omit<AdminAlert, 'id'>[] = [
+  { country: 'Sénégal', type: 'Urgence', message: 'Augmentation signalements mariages forcés — région de Ziguinchor', date: '2025-05-15', level: 'high', status: 'open' },
+  { country: 'Mali', type: 'Alerte', message: 'Recrudescence MGF signalée dans 3 cercles du sud', date: '2025-05-12', level: 'high', status: 'open' },
+  { country: 'France', type: 'Info', message: 'Nouvelle jurisprudence sur les violences économiques dans le couple', date: '2025-05-10', level: 'medium', status: 'resolved' },
+  { country: 'Maroc', type: 'Alerte', message: 'Signalements en hausse de violences conjugales post-Ramadan', date: '2025-05-08', level: 'medium', status: 'open' },
+  { country: 'Cameroun', type: 'Info', message: "Nouvelle circulaire ministérielle sur l'application de la loi VBG", date: '2025-05-05', level: 'low', status: 'resolved' },
+];
+
+export const THEME_SEARCHES_SEED: Record<string, number> = {
+  'Violence domestique': 1234,
+  'Mariage précoce': 987,
+  'Équité salariale': 756,
+  'Harcèlement sexuel': 623,
+  MGF: 445,
 };
 
-export const store = {
-  countries: RAW_COUNTRIES.map(c => ({
-    ...c,
-    viewCount: countryViewSeeds[c.id] ?? Math.floor(Math.random() * 800) + 200,
-  })) as Country[],
-
-  laws: seedLaws(),
-
-  emergencyAlerts: [] as EmergencyAlert[],
-
-  adminAlerts: [
-    { id: '1', country: 'Sénégal', type: 'Urgence', message: 'Augmentation signalements mariages forcés — région de Ziguinchor', date: '2025-05-15', level: 'high', status: 'open' },
-    { id: '2', country: 'Mali', type: 'Alerte', message: 'Recrudescence MGF signalée dans 3 cercles du sud', date: '2025-05-12', level: 'high', status: 'open' },
-    { id: '3', country: 'France', type: 'Info', message: 'Nouvelle jurisprudence sur les violences économiques dans le couple', date: '2025-05-10', level: 'medium', status: 'resolved' },
-    { id: '4', country: 'Maroc', type: 'Alerte', message: "Signalements en hausse de violences conjugales post-Ramadan", date: '2025-05-08', level: 'medium', status: 'open' },
-    { id: '5', country: 'Cameroun', type: 'Info', message: "Nouvelle circulaire ministérielle sur l'application de la loi VBG", date: '2025-05-05', level: 'low', status: 'resolved' },
-  ] as AdminAlert[],
-
-  totalVisits: 15234,
-  uniqueUsers: 8456,
-  themeSearches: {
-    'Violence domestique': 1234,
-    'Mariage précoce': 987,
-    'Équité salariale': 756,
-    'Harcèlement sexuel': 623,
-    MGF: 445,
-  } as Record<string, number>,
-};
-
-export function getCountryById(id: string): Country | undefined {
-  return store.countries.find(c => c.id === id);
-}
-
-export function getLawsForCountry(countryId: string): Law[] {
-  return store.laws.filter(l => l.countryId === countryId);
-}
-
-export function getCountryWithLaws(id: string): CountryWithLaws | undefined {
-  const country = getCountryById(id);
-  if (!country) return undefined;
-
-  const laws = getLawsForCountry(id);
-  return {
-    ...country,
-    laws: {
-      femme: laws.filter(l => l.category === 'femme'),
-      enfant: laws.filter(l => l.category === 'enfant'),
-      vbg: laws.filter(l => l.category === 'vbg'),
-    },
-  };
-}
-
-export function incrementLawView(lawId: string): Law | undefined {
-  const law = store.laws.find(l => l.id === lawId);
-  if (law) {
-    law.viewCount += 1;
-    store.totalVisits += 1;
-  }
-  return law;
-}
-
-export function incrementCountryView(countryId: string): Country | undefined {
-  const country = getCountryById(countryId);
-  if (country) {
-    country.viewCount += 1;
-    store.totalVisits += 1;
-  }
-  return country;
-}
-
-export function createEmergencyAlert(input: {
-  lat?: number;
-  lng?: number;
-  countryId?: string;
-  message?: string;
-}): EmergencyAlert {
-  const alert: EmergencyAlert = {
-    id: uuidv4(),
-    anonymousId: uuidv4().slice(0, 8),
-    countryId: input.countryId,
-    lat: input.lat,
-    lng: input.lng,
-    message: input.message,
-    status: 'open',
-    level: 'high',
-    createdAt: new Date().toISOString(),
-  };
-  store.emergencyAlerts.push(alert);
-  return alert;
-}
-
-export function getDashboardStats(): DashboardStats {
-  const topCountries = [...store.countries]
-    .sort((a, b) => b.viewCount - a.viewCount)
-    .slice(0, 5)
-    .map(c => ({ name: c.name, views: c.viewCount }));
-
-  const topLaws = [...store.laws]
-    .sort((a, b) => b.viewCount - a.viewCount)
-    .slice(0, 5)
-    .map(l => {
-      const country = getCountryById(l.countryId);
-      return { title: `${l.title} (${country?.name ?? l.countryId})`, views: l.viewCount };
-    });
-
-  const topThemes = Object.entries(store.themeSearches)
-    .sort(([, a], [, b]) => b - a)
-    .map(([label, searches]) => ({
-      label,
-      searches,
-      trend: Math.floor(Math.random() * 15) + 8,
-    }));
-
-  const lawCounts = {
-    femme: store.laws.filter(l => l.category === 'femme').length,
-    enfant: store.laws.filter(l => l.category === 'enfant').length,
-    vbg: store.laws.filter(l => l.category === 'vbg').length,
-  };
-
-  return {
-    totalVisits: store.totalVisits,
-    uniqueUsers: store.uniqueUsers,
-    emergencyAlerts: store.emergencyAlerts.filter(a => a.status === 'open').length,
-    countryCount: store.countries.length,
-    topCountries,
-    topLaws,
-    topThemes,
-    lawCounts,
-  };
-}
-
-export function anonymizeAlert(alert: EmergencyAlert) {
-  return {
-    id: alert.id,
-    anonymousId: alert.anonymousId,
-    countryId: alert.countryId,
-    status: alert.status,
-    level: alert.level,
-    createdAt: alert.createdAt,
-    hasLocation: !!(alert.lat && alert.lng),
-  };
-}
+export const APP_STATS_SEED = { totalVisits: 15234, uniqueUsers: 8456 };

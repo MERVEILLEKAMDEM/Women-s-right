@@ -9,7 +9,10 @@
     "dev:web": "npm run dev --prefix map-protect",
     "install:all": "npm install --prefix api && npm install --prefix map-protect",
     "build": "npm run build --prefix api && npm run build --prefix map-protect",
-    "start:api": "npm run start --prefix api"
+    "start:api": "npm run start --prefix api",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:setup": "npm run db:setup --prefix api"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

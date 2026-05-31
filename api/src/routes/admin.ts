@@ -1,67 +1,47 @@
 import { Router } from 'express';
-import { anonymizeAlert, getCountryById, getDashboardStats, store } from '../store.js';
+import * as db from '../db/repository.js';
+import { asyncHandler } from '../middleware/async-handler.js';
+import { paramAsString } from '../utils/params.js';
 import { createLawRouter } from './laws.js';
 
 const router = Router();
 
-router.get('/stats', (_req, res) => {
-  res.json({ data: getDashboardStats() });
-});
+router.get('/stats', asyncHandler(async (_req, res) => {
+  res.json({ data: await db.getDashboardStats() });
+}));
 
-router.get('/laws', (_req, res) => {
-  const laws = store.laws.map(l => ({
-    id: l.id,
-    country: getCountryById(l.countryId)?.name ?? l.countryId,
-    countryId: l.countryId,
-    category: l.category === 'femme' ? 'Femme' : l.category === 'enfant' ? 'Enfant' : 'VBG',
-    title: l.title,
-    type: l.type,
-    status: l.status,
-    viewCount: l.viewCount,
-  }));
-  res.json({ data: laws });
-});
+router.get('/laws', asyncHandler(async (_req, res) => {
+  res.json({ data: await db.getAdminLaws() });
+}));
 
 router.use('/laws', createLawRouter(true));
 
-router.get('/alerts', (_req, res) => {
-  res.json({ data: store.adminAlerts });
-});
+router.get('/alerts', asyncHandler(async (_req, res) => {
+  res.json({ data: await db.getAdminAlerts() });
+}));
 
-router.post('/alerts', (req, res) => {
+router.post('/alerts', asyncHandler(async (req, res) => {
   const { country, type, message, level } = req.body;
   if (!country || !type || !message) {
     res.status(400).json({ error: 'Champs requis: country, type, message' });
     return;
   }
-  const alert = {
-    id: String(store.adminAlerts.length + 1),
-    country,
-    type,
-    message,
-    date: new Date().toISOString().slice(0, 10),
-    level: level ?? 'medium',
-    status: 'open' as const,
-  };
-  store.adminAlerts.unshift(alert);
+  const alert = await db.createAdminAlert({ country, type, message, level });
   res.status(201).json({ data: alert });
-});
+}));
 
-router.patch('/alerts/:id/resolve', (req, res) => {
-  const alert = store.adminAlerts.find(a => a.id === req.params.id);
+router.patch('/alerts/:id/resolve', asyncHandler(async (req, res) => {
+  const alert = await db.resolveAdminAlert(paramAsString(req.params.id));
   if (!alert) {
     res.status(404).json({ error: 'Alerte non trouvée' });
     return;
   }
-  alert.status = 'resolved';
   res.json({ data: alert });
-});
+}));
 
-router.get('/emergencies', (_req, res) => {
-  res.json({
-    data: store.emergencyAlerts.map(anonymizeAlert),
-    meta: { total: store.emergencyAlerts.length },
-  });
-});
+router.get('/emergencies', asyncHandler(async (_req, res) => {
+  const data = await db.getEmergencyAlerts();
+  res.json({ data, meta: { total: data.length } });
+}));
 
 export default router;

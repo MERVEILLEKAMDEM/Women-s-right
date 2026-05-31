@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { anonymizeAlert, createEmergencyAlert, getCountryById, store } from '../store.js';
+import * as db from '../db/repository.js';
+import { asyncHandler } from '../middleware/async-handler.js';
 
 const router = Router();
 
@@ -8,12 +9,11 @@ const FOCAL_COORDINATORS = [
   { name: 'Céline Nathalie Razafindehibe', email: 'celine.razafindehibe@hcs-m26.org', role: 'Ingénierie, Droits et Parité' },
 ];
 
-router.post('/', (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const { lat, lng, countryId, message } = req.body;
+  const alert = await db.createEmergencyAlert({ lat, lng, countryId, message });
 
-  const alert = createEmergencyAlert({ lat, lng, countryId, message });
-
-  const country = countryId ? getCountryById(countryId) : undefined;
+  const country = countryId ? await db.findCountryById(countryId) : null;
   const notifiedContacts = [
     ...FOCAL_COORDINATORS,
     ...(country ? [{ name: country.focalPoint, email: country.email, role: `Point focal ${country.name}` }] : []),
@@ -28,19 +28,20 @@ router.post('/', (req, res) => {
 
   res.status(201).json({
     data: {
-      ...anonymizeAlert(alert),
+      ...db.anonymizeAlert(alert),
       message: 'Alerte transmise aux points focaux. Vous êtes en sécurité — aide en route.',
       emergencyNumber: country?.phone ?? '112',
     },
     notified: notifiedContacts.map(c => ({ name: c.name, role: c.role })),
   });
-});
+}));
 
-router.get('/contacts', (_req, res) => {
+router.get('/contacts', asyncHandler(async (_req, res) => {
+  const countries = await db.findAllCountries();
   res.json({
     data: {
       coordinators: FOCAL_COORDINATORS,
-      countries: store.countries.map(c => ({
+      countries: countries.map(c => ({
         id: c.id,
         name: c.name,
         focalPoint: c.focalPoint,
@@ -49,6 +50,6 @@ router.get('/contacts', (_req, res) => {
       })),
     },
   });
-});
+}));
 
 export default router;

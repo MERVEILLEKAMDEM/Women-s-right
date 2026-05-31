@@ -6,28 +6,62 @@ Plateforme interactive (Web) pour visualiser l'arsenal juridique protégeant les
 
 ```
 map-protect/
-├── api/              # Backend REST (Express + TypeScript)
-└── map-protect/      # Frontend (React + TypeScript + CSS)
+├── api/                # Backend REST (Express + TypeScript + PostgreSQL)
+├── map-protect/        # Frontend (React + TypeScript + CSS)
+└── docker-compose.yml  # PostgreSQL 16
 ```
 
 ## Démarrage rapide
 
 ```bash
-# Installer les dépendances
+# 1. Installer les dépendances
 npm run install:all
 
-# Lancer API + Frontend en parallèle
+# 2. Démarrer PostgreSQL
+npm run db:up
+
+# 3. Créer les tables et insérer les données initiales
+npm run db:setup
+
+# 4. Copier la config API
+cp api/.env.example api/.env
+
+# 5. Lancer API + Frontend
 npm run dev
 ```
 
 - **Frontend** : http://localhost:5173
 - **API** : http://localhost:3001/api/health
+- **PostgreSQL** : `localhost:5432` (user: `mapprotect`, db: `map_protect`)
+
+## Base de données PostgreSQL
+
+### Schéma
+
+| Table | Description |
+|-------|-------------|
+| `countries` | 20 pays signataires + points focaux |
+| `laws` | Lois juridiques (Femme / Enfant / VBG) |
+| `emergency_alerts` | Alertes SOS anonymisées |
+| `admin_alerts` | Alertes administratives HCS-M26 |
+| `app_stats` | Statistiques globales de consultation |
+| `theme_searches` | Compteurs par thématique |
+
+### Scripts DB
+
+```bash
+npm run db:up       # Démarrer PostgreSQL (Docker)
+npm run db:down     # Arrêter PostgreSQL
+npm run db:setup    # Migration + seed (20 pays, 60 lois)
+npm run db:migrate --prefix api   # Schéma uniquement
+npm run db:seed --prefix api      # Données initiales uniquement
+```
 
 ## Endpoints API
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| GET | `/api/health` | Santé du service |
+| GET | `/api/health` | Santé du service + statut PostgreSQL |
 | GET | `/api/countries` | Liste des pays (filtres: `search`, `region`, `theme`) |
 | GET | `/api/countries/:id` | Détail pays + lois par catégorie |
 | GET | `/api/laws` | Liste des lois (filtres: `countryId`, `category`, `theme`) |
@@ -45,13 +79,12 @@ npm run dev
 
 Header requis : `X-API-Key: map-protect-hcs-m26`
 
-Variable d'environnement : `ADMIN_API_KEY`
-
 ## Variables d'environnement
 
 **API** (`api/.env`) :
 ```
 PORT=3001
+DATABASE_URL=postgresql://mapprotect:mapprotect@localhost:5432/map_protect
 ADMIN_API_KEY=map-protect-hcs-m26
 ```
 
@@ -69,6 +102,7 @@ VITE_ADMIN_API_KEY=map-protect-hcs-m26
 - Mode vulgarisation pour chaque loi
 - Bouton SOS avec géolocalisation
 - Back-office CMS + statistiques de consultation
+- Persistance PostgreSQL (lois, alertes, statistiques)
 
 ## HCS-M26
 
