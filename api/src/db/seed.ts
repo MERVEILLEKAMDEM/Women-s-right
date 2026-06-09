@@ -8,13 +8,32 @@ import {
   SEED_COUNTRIES,
   THEME_SEARCHES_SEED,
 } from '../data/seed-data.js';
+import { USERS_SEED } from '../data/users-seed.js';
+
+async function seedUsers(): Promise<void> {
+  const { rows: userCount } = await pool.query('SELECT COUNT(*)::int AS count FROM users');
+  if (userCount[0].count > 0) {
+    console.log('[PostgreSQL] Comptes utilisateurs déjà présents');
+    return;
+  }
+
+  for (const user of USERS_SEED) {
+    await pool.query(
+      `INSERT INTO users (email, full_name, password_hash, role)
+       VALUES ($1, $2, $3, $4)`,
+      [user.email, user.fullName, user.passwordHash, user.role],
+    );
+  }
+  console.log('[PostgreSQL] Comptes créés (1 administrateur, 3 secrétaires)');
+}
 
 async function seed() {
   await testConnection();
 
   const { rows: existing } = await pool.query('SELECT COUNT(*)::int AS count FROM countries');
   if (existing[0].count > 0) {
-    console.log('[PostgreSQL] Base déjà peuplée — seed ignoré');
+    console.log('[PostgreSQL] Base déjà peuplée — seed données ignoré');
+    await seedUsers();
     await closePool();
     return;
   }
@@ -87,8 +106,10 @@ async function seed() {
     throw err;
   } finally {
     client.release();
-    await closePool();
   }
+
+  await seedUsers();
+  await closePool();
 }
 
 seed().catch(err => {

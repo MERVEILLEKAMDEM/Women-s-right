@@ -74,3 +74,25 @@ CREATE TABLE IF NOT EXISTS theme_searches (
   theme VARCHAR(100) PRIMARY KEY,
   search_count INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(200) NOT NULL UNIQUE,
+  full_name VARCHAR(200) NOT NULL,
+  password_hash VARCHAR(200) NOT NULL,
+  role VARCHAR(20) NOT NULL CHECK (role IN ('administrator', 'secretary')),
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+  token UUID PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id);

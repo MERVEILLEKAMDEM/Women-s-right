@@ -7,8 +7,9 @@ import emergencyRouter from './routes/emergency.js';
 import themesRouter from './routes/themes.js';
 import documentsRouter from './routes/documents.js';
 import adminRouter from './routes/admin.js';
+import authRouter from './routes/auth.js';
 import statsRouter from './routes/stats.js';
-import { requireAdmin } from './middleware/auth.js';
+import { attachUser, requireAdmin } from './middleware/auth.js';
 import { checkConnection, testConnection } from './db/pool.js';
 
 const app = express();
@@ -16,6 +17,7 @@ const PORT = process.env.PORT ?? 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use(attachUser);
 
 app.get('/api/health', async (_req, res) => {
   try {
@@ -43,6 +45,7 @@ app.use('/api/emergency', emergencyRouter);
 app.use('/api/themes', themesRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/auth', authRouter);
 app.use('/api/admin', requireAdmin, adminRouter);
 
 app.use((_req, res) => {

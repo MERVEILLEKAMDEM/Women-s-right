@@ -4,7 +4,7 @@ const { Pool } = pg;
 
 const DATABASE_URL =
   process.env.DATABASE_URL ??
-  'postgresql://mapprotect:mapprotect@localhost:5432/map_protect';
+  'postgresql://openpg:root@127.0.0.1:5432/map-protect';
 
 export const pool = new Pool({
   connectionString: DATABASE_URL,

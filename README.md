@@ -13,18 +13,22 @@ map-protect/
 
 ## Démarrage rapide
 
+**Prérequis** : Node.js 20+, PostgreSQL (local ou Docker)
+
 ```bash
 # 1. Installer les dépendances
 npm run install:all
 
-# 2. Démarrer PostgreSQL
-npm run db:up
+# 2. Créer la base (si elle n'existe pas)
+# Windows + PostgreSQL Odoo :
+#   psql -U openpg -h 127.0.0.1 -p 5432 -d postgres -f api/db/create-db.sql
 
-# 3. Créer les tables et insérer les données initiales
-npm run db:setup
-
-# 4. Copier la config API
+# 3. Configurer l'API
 cp api/.env.example api/.env
+cp map-protect/.env.example map-protect/.env
+
+# 4. Créer les tables, données et comptes utilisateurs
+npm run db:setup
 
 # 5. Lancer API + Frontend
 npm run dev
@@ -32,7 +36,10 @@ npm run dev
 
 - **Frontend** : http://localhost:5173
 - **API** : http://localhost:3001/api/health
-- **PostgreSQL** : `localhost:5432` (user: `mapprotect`, db: `map_protect`)
+- **pgAdmin** : http://127.0.0.1:11224/browser/
+- **PostgreSQL** : `127.0.0.1:5432` (user: `openpg`, password: `root`, db: `map-protect`)
+
+> **Note** : le port `11224` est l'interface pgAdmin. Les connexions applicatives utilisent le port `5432`.
 
 ## Base de données PostgreSQL
 
@@ -46,6 +53,8 @@ npm run dev
 | `admin_alerts` | Alertes administratives HCS-M26 |
 | `app_stats` | Statistiques globales de consultation |
 | `theme_searches` | Compteurs par thématique |
+| `users` | Comptes administrateur et secrétaires |
+| `user_sessions` | Sessions de connexion |
 
 ### Scripts DB
 
@@ -74,17 +83,31 @@ npm run db:seed --prefix api      # Données initiales uniquement
 | GET | `/api/admin/stats` | Tableau de bord (clé API requise) |
 | GET/POST/PUT/DELETE | `/api/admin/laws` | CMS gestion des lois |
 | GET/PATCH | `/api/admin/alerts` | Gestion des alertes |
+| POST | `/api/auth/login` | Connexion (email + mot de passe) |
+| GET | `/api/auth/me` | Profil de la session active |
+| POST | `/api/auth/logout` | Déconnexion |
+
+### Comptes utilisateurs (seed)
+
+| Rôle | Email | Mot de passe |
+|------|-------|--------------|
+| Administrateur | `admin@map-protect.hcs` | `Admin@2026` |
+| Secrétaire 1 | `secretary1@map-protect.hcs` | `Secretary1@2026` |
+| Secrétaire 2 | `secretary2@map-protect.hcs` | `Secretary2@2026` |
+| Secrétaire 3 | `secretary3@map-protect.hcs` | `Secretary3@2026` |
 
 ### Authentification Admin
 
-Header requis : `X-API-Key: map-protect-hcs-m26`
+Option A — clé API : `X-API-Key: map-protect-hcs-m26`
+
+Option B — session administrateur : `Authorization: Bearer <token>` (obtenu via `POST /api/auth/login`)
 
 ## Variables d'environnement
 
 **API** (`api/.env`) :
 ```
 PORT=3001
-DATABASE_URL=postgresql://mapprotect:mapprotect@localhost:5432/map_protect
+DATABASE_URL=postgresql://openpg:root@127.0.0.1:5432/map-protect
 ADMIN_API_KEY=map-protect-hcs-m26
 ```
 
